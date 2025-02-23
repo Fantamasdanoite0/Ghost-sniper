@@ -1,0 +1,153 @@
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+local UIListLayout = Instance.new("UIListLayout")
+
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false
+
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+Frame.Position = UDim2.new(0.1, 0, 0.1, 0)
+Frame.Size = UDim2.new(0, 250, 0, 300)
+Frame.Active = true
+Frame.Draggable = true
+
+Title.Parent = Frame
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Remote Spy"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+
+ScrollingFrame.Parent = Frame
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+ScrollingFrame.Position = UDim2.new(0, 5, 0, 30)
+ScrollingFrame.Size = UDim2.new(1, -10, 1, -35)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 5
+ScrollingFrame.ScrollingEnabled = true
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+
+UIListLayout.Parent = ScrollingFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
+
+local remoteCache = {}
+
+local function createRemoteButton(remote)
+    if remoteCache[remote] then return end
+
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -10, 0, 60)
+    container.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    container.Parent = ScrollingFrame
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -10, 0, 15)
+    nameLabel.Position = UDim2.new(0, 5, 0, 5)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = remote.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextSize = 12
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = container
+
+    local argsInput = Instance.new("TextBox")
+    argsInput.Size = UDim2.new(1, -10, 0, 15)
+    argsInput.Position = UDim2.new(0, 5, 0, 25)
+    argsInput.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    argsInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    argsInput.Font = Enum.Font.Gotham
+    argsInput.TextSize = 12
+    argsInput.PlaceholderText = "Args (separate with commas)"
+    argsInput.Parent = container
+
+    local fireButton = Instance.new("TextButton")
+    fireButton.Size = UDim2.new(0.45, 0, 0, 15)
+    fireButton.Position = UDim2.new(0, 5, 0, 45)
+    fireButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    fireButton.Text = remote:IsA("RemoteEvent") and "Fire" or "Invoke"
+    fireButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fireButton.Font = Enum.Font.Gotham
+    fireButton.TextSize = 12
+    fireButton.Parent = container
+
+    local copyButton = Instance.new("TextButton")
+    copyButton.Size = UDim2.new(0.45, 0, 0, 15)
+    copyButton.Position = UDim2.new(0.5, 5, 0, 45)
+    copyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+    copyButton.Text = "Copy Path"
+    copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyButton.Font = Enum.Font.Gotham
+    copyButton.TextSize = 12
+    copyButton.Parent = container
+
+    fireButton.MouseButton1Click:Connect(function()
+        local args = {}
+        for arg in string.gmatch(argsInput.Text, "[^,]+") do
+            table.insert(args, tonumber(arg) or arg)
+        end
+        if remote:IsA("RemoteEvent") then
+            remote:FireServer(table.unpack(args))
+        elseif remote:IsA("RemoteFunction") then
+            local success, result = pcall(function()
+                return remote:InvokeServer(table.unpack(args))
+            end)
+            if success then
+                print("Response:", result)
+            else
+                warn("Error:", result)
+            end
+        end
+    end)
+
+    copyButton.MouseButton1Click:Connect(function()
+        local path = ""
+        local current = remote
+        while current and current ~= game do
+            path = current.Name .. (path == "" and "" or "." .. path)
+            current = current.Parent
+        end
+        setclipboard(path)
+        copyButton.Text = "Copied!"
+        wait(1)
+        copyButton.Text = "Copy Path"
+    end)
+
+    remoteCache[remote] = container
+end
+
+local function scanRemotes()
+    for _, instance in ipairs(game:GetDescendants()) do
+        if (instance:IsA("RemoteEvent") or instance:IsA("RemoteFunction")) then
+            createRemoteButton(instance)
+        end
+    end
+end
+
+local function updateRemotesLoop()
+    while true do
+        scanRemotes()
+        wait(30)
+    end
+end
+
+spawn(updateRemotesLoop)
+
+game.DescendantAdded:Connect(function(descendant)
+    if (descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction")) then
+        createRemoteButton(descendant)
+    end
+end)
+
+game.DescendantRemoving:Connect(function(descendant)
+    if remoteCache[descendant] then
+        remoteCache[descendant]:Destroy()
+        remoteCache[descendant] = nil
+    end
+end)
