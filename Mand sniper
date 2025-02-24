@@ -1,0 +1,123 @@
+local lib = loadstring(game:HttpGet("https://github.com/rdx522/rdx/raw/refs/heads/main/libkdr.txt"))()
+
+local Window = lib:CreateWindow("Auto Buy Hub")
+
+local AutoBuyTab = Window:NewTab("Auto Buy")
+
+local AutoBuySection = AutoBuyTab:AddSection("Mand Sniper")
+
+local isPromptClosed = false
+local hidePlayersEnabled = false
+local autoProximityEnabled = false
+local isProcessingPrompt = false
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local HttpService = game:GetService("HttpService")
+
+local function fastBuy()
+    getrenv()._set = clonefunction(setthreadidentity)
+    local old
+    old = hookmetamethod(game, "__index", function(a, b)
+        task.spawn(function()
+            _set(7)
+            if isProcessingPrompt then return end
+            isProcessingPrompt = true
+
+            local connection
+            connection = MarketplaceService.PromptPurchaseRequestedV2:Connect(function(...)
+                local startTime = tick()
+                local t = {...}
+                local assetId = t[2]
+                local idempotencyKey = t[5]
+                local purchaseAuthToken = t[6]
+
+                local success, result = pcall(function()
+                    return MarketplaceService:PerformPurchase(Enum.InfoType.Asset, 0, 0,
+                        tostring(HttpService:GenerateGUID(false)), true, nil,
+                        nil, idempotencyKey, tostring(purchaseAuthToken))
+                end)
+
+                if success then
+                    local endTime = tick()
+                    local duration = endTime - startTime
+                    print("[Fast Buy] Item comprado com sucesso! Tempo: " .. tostring(duration) .. " segundos")
+                else
+                    print("[Fast Buy] Falha ao comprar item: " .. result)
+                end
+
+                isProcessingPrompt = false
+                connection:Disconnect()
+            end)
+        end)
+        hookmetamethod(game, "__index", old)
+        return old(a, b)
+    end)
+end
+
+local function monitorGui()
+    while true do
+        task.wait(MONITOR_INTERVAL)
+
+        if isPromptClosed then
+            for _, gui in pairs(game.CoreGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and gui.Name:lower():find("purchase") then
+                    gui.Enabled = false
+                    gui:Destroy()
+                    print("[Auto Buy] Prompt fechado automaticamente!")
+                end
+            end
+        end
+    end
+end
+
+local function hidePlayers()
+    while true do
+        if hidePlayersEnabled then
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Character then
+                    player.Character:Destroy()
+                end
+            end
+        end
+        task.wait()
+    end
+end
+
+local function proxi()
+    spawn(function()
+        while autoProximityEnabled do
+            for _, pro in ipairs(workspace:GetDescendants()) do
+                if pro:IsA("ProximityPrompt") then
+                    fireproximityprompt(pro)
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+AutoBuySection:AddToggle("Fechar Prompt", "Fecha prompts automaticamente", false, function(state)
+    isPromptClosed = state
+    print("[Auto Buy] Fechar Prompt: " .. (state and "ON" or "OFF"))
+end)
+
+AutoBuySection:AddToggle("Ocultar Jogadores", "Oculta outros jogadores", false, function(state)
+    hidePlayersEnabled = state
+    print("[Auto Buy] Ocultar Jogadores: " .. (state and "ON" or "OFF"))
+end)
+
+AutoBuySection:AddToggle("Auto Proximity", "Ativa/Desativa ProximityPrompt em loop", false, function(state)
+    autoProximityEnabled = state
+    print("[Auto Buy] Auto Proximity: " .. (state and "ON" or "OFF"))
+    if state then
+        proxi()
+    end
+end)
+
+task.spawn(monitorGui)
+task.spawn(hidePlayers)
+
+while true do
+    fastBuy()
+    task.wait(0.001)
+end
