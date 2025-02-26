@@ -1,3 +1,44 @@
+local function Notify(message, duration)
+    spawn(function()
+        local existingNotification = game.CoreGui:FindFirstChild("Notification")
+        if existingNotification then
+            existingNotification:Destroy()
+        end
+
+        local notificationGui = Instance.new("ScreenGui")
+        notificationGui.Name = "Notification"
+        notificationGui.Parent = game.CoreGui
+
+        local notificationLabel = Instance.new("TextLabel")
+        notificationLabel.Text = message
+        notificationLabel.Size = UDim2.new(0, 200, 0, 50)
+        notificationLabel.Position = UDim2.new(0.5, -100, 1, -50)
+        notificationLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        notificationLabel.TextColor3 = Color3.new(1, 1, 1)
+        notificationLabel.BackgroundTransparency = 0.5
+        notificationLabel.Parent = notificationGui
+
+        Instance.new("UICorner", notificationLabel).CornerRadius = UDim.new(0, 6)
+
+        game:GetService("TweenService"):Create(
+            notificationLabel,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = UDim2.new(0.5, -100, 0.9, -25)}
+        ):Play()
+
+        wait(duration)
+        notificationGui:Destroy()
+    end)
+end
+
+local function Sound(soundId, volume)
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://" .. soundId
+    sound.Parent = game.CoreGui
+    sound.Volume = volume
+    sound:Play()
+end
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 local Window = Library:NewWindow("Just A Mand 🌙")
 local ScriptTab = Window:NewSection("Script")
@@ -7,7 +48,6 @@ local hidePlayersEnabled = false
 local autoProximityEnabled = false
 local isProcessingPrompt = false
 local loopActive = false
-
 local playerVisibility = {}
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -40,8 +80,10 @@ local function fastBuy()
                     local endTime = tick()
                     local duration = endTime - startTime
                     print("[Fast Buy] Item comprado com sucesso! Tempo: " .. tostring(duration) .. " segundos")
+                    Notify("Item comprado com sucesso!", 3)
                 else
                     print("[Fast Buy] Falha ao comprar item: " .. result)
+                    Notify("Falha ao comprar item!", 3)
                 end
 
                 isProcessingPrompt = false
@@ -63,6 +105,7 @@ local function monitorGui()
                     gui.Enabled = false
                     gui:Destroy()
                     print("[Auto Buy] Prompt fechado automaticamente!")
+                    Notify("Prompt fechado automaticamente!", 3)
                 end
             end
         end
@@ -82,7 +125,8 @@ local function togglePlayerVisibility(state)
                 end
             end
         end
-        print("[Auto Buy] Ocultar Jogadores: ON")
+        print("[Auto Buy] Hider Players: ON")
+        Notify("Hider Players: ON", 3)
     else
         for part, transparency in pairs(playerVisibility) do
             if part and part.Parent then
@@ -90,7 +134,8 @@ local function togglePlayerVisibility(state)
             end
         end
         playerVisibility = {}
-        print("[Auto Buy] Ocultar Jogadores: OFF")
+        print("[Auto Buy] Hider Players: OFF")
+        Notify("Hider Players: OFF", 3)
     end
 end
 
@@ -111,12 +156,14 @@ local function autoCloseError(value)
         end
     end)
     print("[Auto Close Error] " .. (loopActive and "ON" or "OFF"))
+    Notify("Auto Close Error: " .. (loopActive and "ON" or "OFF"), 3)
 end
 
 local function proxi()
     autoProximityEnabled = not autoProximityEnabled
     if autoProximityEnabled then
-        print("[Auto Buy] Auto Proximity: ON")
+        print("[Auto Buy] firepp: ON")
+        Notify("firepp: ON", 3)
         spawn(function()
             while autoProximityEnabled do
                 for _, pro in ipairs(workspace:GetDescendants()) do
@@ -128,7 +175,8 @@ local function proxi()
             end
         end)
     else
-        print("[Auto Buy] Auto Proximity: OFF")
+        print("[Auto Buy] firepp: OFF")
+        Notify("firepp: OFF", 3)
     end
 end
 
@@ -142,11 +190,13 @@ local function antiAFK()
     end)
     coroutine.resume(iku)
     print("[Anti AFK] Ativado!")
+    Notify("Anti AFK Ativado!", 3)
 end
 
 ScriptTab:CreateToggle("Auto Buy", function(state)
     isPromptClosed = state
-    print("[Auto Buy] Fechar Prompt: " .. (state and "ON" or "OFF"))
+    print("[Auto Buy] Cancel Prompt: " .. (state and "ON" or "OFF"))
+    Notify("Auto Buy: " .. (state and "ON" or "OFF"), 3)
 end)
 
 ScriptTab:CreateToggle("Auto Close Error", function(state)
@@ -157,9 +207,11 @@ ScriptTab:CreateButton("Auto Cancel Prompt", function()
     loopActive = not loopActive
     if loopActive then
         print("[Auto Close Prompt] Loop Ativado!")
+        Notify("Auto Close Prompt: ON", 3)
         spawn(monitorGui)
     else
         print("[Auto Close Prompt] Loop Desativado!")
+        Notify("Auto Close Prompt: OFF", 3)
     end
 end)
 
