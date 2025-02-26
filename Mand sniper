@@ -1,15 +1,14 @@
-local lib = loadstring(game:HttpGet("https://github.com/rdx522/rdx/raw/refs/heads/main/libkdr.txt"))()
-
-local Window = lib:CreateWindow("Auto Buy Hub")
-
-local AutoBuyTab = Window:NewTab("Auto Buy")
-
-local AutoBuySection = AutoBuyTab:AddSection("Mand Sniper")
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+local Window = Library:NewWindow("Just A Mand 🌙")
+local ScriptTab = Window:NewSection("Script")
 
 local isPromptClosed = false
 local hidePlayersEnabled = false
 local autoProximityEnabled = false
 local isProcessingPrompt = false
+local loopActive = false
+
+local playerVisibility = {}
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local HttpService = game:GetService("HttpService")
@@ -55,8 +54,8 @@ local function fastBuy()
 end
 
 local function monitorGui()
-    while true do
-        task.wait(MONITOR_INTERVAL)
+    while loopActive do
+        task.wait(1)
 
         if isPromptClosed then
             for _, gui in pairs(game.CoreGui:GetChildren()) do
@@ -70,52 +69,110 @@ local function monitorGui()
     end
 end
 
-local function hidePlayers()
-    while true do
-        if hidePlayersEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Character then
-                    player.Character:Destroy()
+local function togglePlayerVisibility(state)
+    hidePlayersEnabled = state
+    if state then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        playerVisibility[part] = part.Transparency
+                        part.Transparency = 1
+                    end
                 end
             end
         end
-        task.wait()
+        print("[Auto Buy] Ocultar Jogadores: ON")
+    else
+        for part, transparency in pairs(playerVisibility) do
+            if part and part.Parent then
+                part.Transparency = transparency
+            end
+        end
+        playerVisibility = {}
+        print("[Auto Buy] Ocultar Jogadores: OFF")
     end
 end
 
-local function proxi()
+local function autoCloseError(value)
+    loopActive = value
     spawn(function()
-        while autoProximityEnabled do
-            for _, pro in ipairs(workspace:GetDescendants()) do
-                if pro:IsA("ProximityPrompt") then
-                    fireproximityprompt(pro)
+        while loopActive do
+            local pp = game.CoreGui.PurchasePrompt.ProductPurchaseContainer.Animator:FindFirstChild("Prompt")
+            if pp and pp.AlertContents and pp.AlertContents.Footer and pp.AlertContents.Footer.Buttons and not pp.AlertContents.Footer.Buttons:FindFirstChild("2") then
+                if pp.AlertContents.Footer.Buttons:FindFirstChild("1") then
+                    local b1 = pp.AlertContents.Footer.Buttons[1].AbsolutePosition
+                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(b1.X + 55, b1.Y + 65.5, 0, true, game, 1)
+                    wait()
+                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(b1.X + 55, b1.Y + 65.5, 0, false, game, 1)
                 end
             end
-            task.wait(0.1)
+            wait()
         end
     end)
+    print("[Auto Close Error] " .. (loopActive and "ON" or "OFF"))
 end
 
-AutoBuySection:AddToggle("Fechar Prompt", "Fecha prompts automaticamente", false, function(state)
+local function proxi()
+    autoProximityEnabled = not autoProximityEnabled
+    if autoProximityEnabled then
+        print("[Auto Buy] Auto Proximity: ON")
+        spawn(function()
+            while autoProximityEnabled do
+                for _, pro in ipairs(workspace:GetDescendants()) do
+                    if pro:IsA("ProximityPrompt") then
+                        fireproximityprompt(pro)
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    else
+        print("[Auto Buy] Auto Proximity: OFF")
+    end
+end
+
+local function antiAFK()
+    local iku = coroutine.create(function()
+        local VirtualUser = game:GetService("VirtualUser")
+        game:GetService("Players").LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end)
+    coroutine.resume(iku)
+    print("[Anti AFK] Ativado!")
+end
+
+ScriptTab:CreateToggle("Auto Buy", function(state)
     isPromptClosed = state
     print("[Auto Buy] Fechar Prompt: " .. (state and "ON" or "OFF"))
 end)
 
-AutoBuySection:AddToggle("Ocultar Jogadores", "Oculta outros jogadores", false, function(state)
-    hidePlayersEnabled = state
-    print("[Auto Buy] Ocultar Jogadores: " .. (state and "ON" or "OFF"))
+ScriptTab:CreateToggle("Auto Close Error", function(state)
+    autoCloseError(state)
 end)
 
-AutoBuySection:AddToggle("Auto Proximity", "Ativa/Desativa ProximityPrompt em loop", false, function(state)
-    autoProximityEnabled = state
-    print("[Auto Buy] Auto Proximity: " .. (state and "ON" or "OFF"))
-    if state then
-        proxi()
+ScriptTab:CreateButton("Auto Cancel Prompt", function()
+    loopActive = not loopActive
+    if loopActive then
+        print("[Auto Close Prompt] Loop Ativado!")
+        spawn(monitorGui)
+    else
+        print("[Auto Close Prompt] Loop Desativado!")
     end
 end)
 
-task.spawn(monitorGui)
-task.spawn(hidePlayers)
+ScriptTab:CreateButton("firepp", function()
+    proxi()
+end)
+
+ScriptTab:CreateButton("Hide Players", function()
+    hidePlayersEnabled = not hidePlayersEnabled
+    togglePlayerVisibility(hidePlayersEnabled)
+end)
+
+antiAFK()
 
 while true do
     fastBuy()
