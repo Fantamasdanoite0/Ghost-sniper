@@ -20,18 +20,33 @@ local function Notify(message, duration)
 
         Instance.new("UICorner", notificationLabel).CornerRadius = UDim.new(0, 6)
 
-        game:GetService("TweenService"):Create(
+        local tweenIn = game:GetService("TweenService"):Create(
             notificationLabel,
             TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {Position = UDim2.new(0.5, -100, 0.9, -25)}
-        ):Play()
+        )
+        tweenIn:Play()
 
         wait(duration)
+
+        local tweenOut = game:GetService("TweenService"):Create(
+            notificationLabel,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = UDim2.new(0.5, -100, 1, -50)}
+        )
+        tweenOut:Play()
+
+        tweenOut.Completed:Wait()
         notificationGui:Destroy()
     end)
 end
 
 local function Sound(soundId, volume)
+    if not tonumber(soundId) then
+        warn("Invalid soundId: " .. soundId)
+        return
+    end
+
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://" .. soundId
     sound.Parent = game.CoreGui
@@ -51,65 +66,79 @@ local loopActive = false
 local playerVisibility = {}
 
 local MarketplaceService = game:GetService("MarketplaceService")
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
-local function fastBuy()
+local function sendNotification(title, text, duration, icon)
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = duration,
+        Icon = icon
+    })
+end
+
+local function playNotificationSound()
+    local soundService = game:GetService("SoundService")
+    local notificationSound = Instance.new("Sound")
+
+    notificationSound.SoundId = "rbxassetid://8745692251"
+    notificationSound.Volume = 0.5
+    notificationSound.Parent = soundService
+
+    notificationSound:Play()
+end
+
+local function autoPurchaseUGCItem()
     getrenv()._set = clonefunction(setthreadidentity)
     local old
     old = hookmetamethod(game, "__index", function(a, b)
         task.spawn(function()
             _set(7)
-            if isProcessingPrompt then return end
-            isProcessingPrompt = true
-
-            local connection
-            connection = MarketplaceService.PromptPurchaseRequestedV2:Connect(function(...)
+            task.wait()
+            getgenv().promptpurchaserequestedv2 = MarketplaceService.PromptPurchaseRequestedV2:Connect(function(...)
+                Notify("Prompt Detected: Attempting to purchase the UGC item...", 5)
                 local startTime = tick()
                 local t = {...}
                 local assetId = t[2]
                 local idempotencyKey = t[5]
                 local purchaseAuthToken = t[6]
+                local info = MarketplaceService:GetProductInfo(assetId)
+                local productId = info.ProductId
+                local price = info.PriceInRobux
+                local collectibleItemId = info.CollectibleItemId
+                local collectibleProductId = info.CollectibleProductId
 
+                Notify("PurchaseAuthToken: " .. purchaseAuthToken, 5)
+                Notify("IdempotencyKey: " .. idempotencyKey, 5)
+                Notify("CollectibleItemId: " .. collectibleItemId, 5)
+                Notify("CollectibleProductId: " .. collectibleProductId, 5)
+                Notify("ProductId (should be 0): " .. productId, 5)
+                Notify("Price: " .. price, 5)
+                playNotificationSound()
                 local success, result = pcall(function()
-                    return MarketplaceService:PerformPurchase(Enum.InfoType.Asset, 0, 0,
-                        tostring(HttpService:GenerateGUID(false)), true, nil,
-                        nil, idempotencyKey, tostring(purchaseAuthToken))
+                    return MarketplaceService:PerformPurchase(Enum.InfoType.Asset, productId, price,
+                        tostring(game:GetService("HttpService"):GenerateGUID(false)), true, collectibleItemId,
+                        collectibleProductId, idempotencyKey, tostring(purchaseAuthToken))
                 end)
 
                 if success then
+                    Notify("First Purchase Attempt", 5)
+                    for i, v in pairs(result) do
+                        Notify(i .. ": " .. v, 5)
+                    end
                     local endTime = tick()
                     local duration = endTime - startTime
-                    print("[Fast Buy] Item comprado com sucesso! Tempo: " .. tostring(duration) .. " segundos")
-                    Notify("Item comprado com sucesso!", 3)
+                    Notify("Bought Item! Took " .. tostring(duration) .. " seconds", 5)
                 else
-                    print("[Fast Buy] Falha ao comprar item: " .. result)
-                    Notify("Falha ao comprar item!", 3)
+                    Notify("Failed to Purchase Item: " .. result, 5)
                 end
-
-                isProcessingPrompt = false
-                connection:Disconnect()
             end)
         end)
         hookmetamethod(game, "__index", old)
         return old(a, b)
     end)
-end
-
-local function monitorGui()
-    while loopActive do
-        task.wait(1)
-
-        if isPromptClosed then
-            for _, gui in pairs(game.CoreGui:GetChildren()) do
-                if gui:IsA("ScreenGui") and gui.Name:lower():find("purchase") then
-                    gui.Enabled = false
-                    gui:Destroy()
-                    print("[Auto Buy] Prompt fechado automaticamente!")
-                    Notify("Prompt fechado automaticamente!", 3)
-                end
-            end
-        end
-    end
 end
 
 local function togglePlayerVisibility(state)
@@ -226,7 +255,4 @@ end)
 
 antiAFK()
 
-while true do
-    fastBuy()
-    task.wait(0.001)
-end
+autoPurchaseUGCItem()
