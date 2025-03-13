@@ -55,7 +55,7 @@ local function Sound(soundId, volume)
 end
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
-local Window = Library:NewWindow("Just A Mand 🌙")
+local Window = Library:NewWindow("Just A ghost 🌙")
 local ScriptTab = Window:NewSection("Script")
 
 local isPromptClosed = false
