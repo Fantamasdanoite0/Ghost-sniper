@@ -4,7 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()  
 local window = Library:NewWindow("Auto Purchase")  
-local productsTab = window:NewSection("Developer Products")  
+local productsTab = window:NewSection("Ghost dev Products")  
 
 local products = {}  
 local loopAll = false  
