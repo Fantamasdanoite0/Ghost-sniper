@@ -5,7 +5,7 @@ local LocalPlayer = Players.LocalPlayer
 local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/jensonhirst/Orion/main/source'))()
 
 local Window = OrionLib:MakeWindow({
-    Name = "Ultimate Product Purchaser",
+    Name = "Ghost Product Purchaser",
     HidePremium = false,
     SaveConfig = false,
     IntroEnabled = false
