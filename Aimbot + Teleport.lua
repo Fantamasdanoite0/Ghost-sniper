@@ -8,7 +8,7 @@ local settings = {
     prioritize_head = true,
     fov_circle = true,
     
-    teleport_delay = 0.1,
+    teleport_delay = 0.3,
     distance_behind = 3,
     teleport_enabled = true
 }
@@ -28,7 +28,7 @@ local function createFOVCircle()
     circle.Color = Color3.fromRGB(255, 255, 255)
     circle.Transparency = 0.1
     circle.Filled = false
-    circle.Radius = 12
+    circle.Radius = 109
     circle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
     return circle
