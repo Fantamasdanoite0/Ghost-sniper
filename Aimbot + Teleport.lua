@@ -1,14 +1,14 @@
 local settings = {
   
-    smoothness = 0.15,
+    smoothness = 0.1,
     max_range = 500,
     prediction = true,
-    prediction_amount = 0.3,
+    prediction_amount = 0.1,
     ignore_team = true,
     prioritize_head = true,
     fov_circle = true,
     
-    teleport_delay = 0.5,
+    teleport_delay = 0.01,
     distance_behind = 3,
     teleport_enabled = true
 }
@@ -26,9 +26,9 @@ local function createFOVCircle()
     circle.Visible = true
     circle.Thickness = 1
     circle.Color = Color3.fromRGB(255, 255, 255)
-    circle.Transparency = 0.7
+    circle.Transparency = 0.1
     circle.Filled = false
-    circle.Radius = 120
+    circle.Radius = 12
     circle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
     return circle
