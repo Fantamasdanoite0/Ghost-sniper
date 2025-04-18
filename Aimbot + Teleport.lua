@@ -1,14 +1,14 @@
 local settings = {
   
-    smoothness = 0.1,
+    smoothness = 0.15,
     max_range = 500,
     prediction = true,
-    prediction_amount = 0.1,
+    prediction_amount = 0.4,
     ignore_team = true,
     prioritize_head = true,
     fov_circle = true,
     
-    teleport_delay = 0.01,
+    teleport_delay = 0.1,
     distance_behind = 3,
     teleport_enabled = true
 }
